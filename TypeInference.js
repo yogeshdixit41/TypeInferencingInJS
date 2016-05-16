@@ -1,11 +1,14 @@
 var Reflect = require('reflect');
-//var typeMap = {};
 var typeMapArray = [];
+var errorFlag = false;
 
 
-//var code = "var y;var myInt = [10, 11]; var myString = \'hello\';function test(y){var x = 12; return x;}";
-var code = "var num = 12; var str = \'hello\'; var y = num - str;";
-//var code = "var x = 3 + \"hello\" ; var y = \'ghi\' - 2; x = 3 + 4; x = 3;";
+//var code = "var y;var myInt = [10, 11]; var myString = \'hello\';function test(){var x = 12; return x;}; var my = 3 + test";
+//var code = "var num = 12; var str = \'hello\'; var y = num - str;";
+//var code = "var num = 12; var y = num + 10;";
+var code = "var x = 3; var y = \"hi there\"; y = 12 + x;"
+//var code = "var x = \"hello\" ;  x = 3 + 4;";
+//var code = "var x = 3; var y = 4; var xy = x + y;";
 
 try {
     eval(code);
@@ -18,6 +21,8 @@ try {
 
 var ast = Reflect.parse(code, {loc:true,range:true,raw:true,tokens:true,comment:true});
 mainParse(ast);
+if(!errorFlag)
+  console.log("No errors found in the given JS program.... you are type safe now ");
 console.log(typeMapArray);
 
 //console.log(ast);
@@ -26,11 +31,23 @@ function mainParse(ast)
 {
   for(a in ast.body)
   {
-      statementTypeDetector(ast.body[a]);
+      if(!errorFlag)
+      {
+          statementTypeDetector(ast.body[a]);
+      }
+      else
+      {
+        console.log("Type inference interrupted ... error found");
+        break;
+      }
   }
 
 }
 
+/**
+* Helper function to parse function object
+* this function calls evaluateFunctionExpression which evaluates the typeMap
+**/
 
 function parseFunctionExpression(idObj, bodyObj, rangeObj, locationObj)
 {
@@ -44,6 +61,13 @@ function parseFunctionExpression(idObj, bodyObj, rangeObj, locationObj)
   console.log("Inferred type for "+ idObj.name +" is "+ inferredType);
 }
 
+
+/**
+* Parse assignment expressionObj
+* Call parseBinaryExpression if expression type is binary or
+* call geType if it is a Literal
+**/
+
 function parseExpression(expressionObj)
 {
 
@@ -52,22 +76,33 @@ function parseExpression(expressionObj)
 
     if(expressionObj['right'].type === 'BinaryExpression')
     {
-      parseBinaryExpression(expressionObj['left'], expressionObj['right'], expressionObj['range'], expressionObj['loc']);
+      inferredTypeRightObj = evaluateBinaryExpression(expressionObj['right']);
+      lookupTypeLeftObj = lookupType(expressionObj['left']);
+      if(inferredTypeRightObj !== lookupTypeLeftObj)
+      {
+        console.log("Cannot assign "+ inferredTypeRightObj + " to " + lookupTypeLeftObj);
+        typeError(expressionObj['left']);
+      }
+      //parseBinaryExpression(expressionObj['left'], expressionObj['right'], expressionObj['range'], expressionObj['loc']);
     }
     else if (expressionObj['right'].type === 'Literal')
     {
-      inferredType = getType(expressionObj['right']);
-      rangeObj = expressionObj['left'].range;
-      var typeMap = {};
-      typeMap.rangeObj = rangeObj;
-      typeMap.inferredType = inferredType;
-      typeMap.name = expressionObj['left'].name;
-      typeMapArray.push(typeMap);
-      console.log("Inferred type for "+ expressionObj['left'].name +" is "+ inferredType);
+      inferredTypeRightObj = getType(expressionObj['right']);
+      lookupTypeLeftObj = lookupType(expressionObj['left']);
+      if(inferredTypeRightObj !== lookupTypeLeftObj)
+      {
+        console.log("Cannot assign "+ inferredTypeRightObj + " to " + lookupTypeLeftObj);
+        typeError(expressionObj['left']);
+      }
     }
   }
 }
 
+
+/**
+* Parse binary expressionObj
+* Calls evaluateBinaryExpression
+**/
 
 function parseBinaryExpression(leftObj, rightObj, rangeObj, locationObj)
 {
@@ -75,7 +110,10 @@ function parseBinaryExpression(leftObj, rightObj, rangeObj, locationObj)
     //console.log(e + "----" + rightObj[e]);
   inferredType = evaluateBinaryExpression(rightObj);
   if(inferredType === "Type check error")
-    console.log("Type Error....");
+  {
+      console.log("Type error...");
+      typeError(leftObj);
+  }
   else
   {
     var typeMap = {};
@@ -85,13 +123,18 @@ function parseBinaryExpression(leftObj, rightObj, rangeObj, locationObj)
     typeMapArray.push(typeMap);
     console.log("Inferred type for "+ leftObj.name +" is "+ inferredType);
   }
-  //console.log(leftObj.name);
 }
+
+
+/**
+* Helper function to parse araay expressionObj
+* Calls evaluateArrayExpression to infer types
+**/
 
 function parseArrayExpression(leftObj, rightObj, rangeObj, locationObj)
 {
   var typeMap = {};
-  inferredType = evaluateArrayExpression(rightObj);
+  inferredType = '['+evaluateArrayExpression(rightObj)+']';
   typeMap.rangeObj = rangeObj;
   typeMap.inferredType = inferredType;
   typeMap.name = leftObj.name;
@@ -99,6 +142,9 @@ function parseArrayExpression(leftObj, rightObj, rangeObj, locationObj)
   console.log("Inferred type for "+ leftObj.name +" is "+ inferredType);
 }
 
+/**
+* Inferrs the type of an array the type of te array
+**/
 function evaluateArrayExpression(arrayExpression)
 {
   var dafaultType = "DefaultArrayType";
@@ -126,6 +172,9 @@ function evaluateArrayExpression(arrayExpression)
 
 }
 
+/**
+* eInferrs the type of an function of which funBodyObject is passed as parameter
+**/
 
 function evaluateFunctionExpression(funBodyObject)
 {
@@ -199,9 +248,9 @@ function evaluateBinaryExpression(binExpressionObj)
 }
 
 
-/*
-** returns the type of the obj passed as parameter
-*/
+/**
+* returns the type of the obj passed as parameter
+**/
 function getType(obj)
 {
 
@@ -211,15 +260,39 @@ function getType(obj)
     if(ast.tokens[t].range === obj.range)
     {
       //console.log("##"+ast.tokens[t].type);
-      return ast.tokens[t].type;
+      var type = ast.tokens[t].type;
+      if( type === 'Identifier')
+      {
+        type = lookupType(obj);
+      }
+      return type;
+
     }
     else
     {
-      //return "error";
+      //return lookupType(obj);
     }
   }
 }
 
+
+function lookupType(obj)
+{
+  //console.log("Inside lookup ---- " + obj.range + "----" + obj.name);
+  for ( each in typeMapArray)
+  {
+    if(typeMapArray[each].name === obj.name)
+    {
+      return typeMapArray[each].inferredType;
+    }
+  }
+}
+
+function typeError(obj)
+{
+  errorFlag = true;
+  console.log(" ***** Type error at line "+ obj.loc.start.line + " and column "+ obj.loc.start.column + " ***** ");
+}
 
 
 function statementTypeDetector(statementObj)

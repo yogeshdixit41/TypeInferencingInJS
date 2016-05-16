@@ -1,0 +1,16 @@
+{
+  "title": "jsinfer-addon",
+  "name": "jsinfer-addon",
+  "version": "0.0.1",
+  "description": "add-on for JS type inference",
+  "main": "index.js",
+  "author": "Yogesh Dixit",
+  "engines": {
+    "firefox": ">=38.0a1",
+    "fennec": ">=38.0a1"
+  },
+  "license": "MIT",
+  "keywords": [
+    "jetpack"
+  ]
+}

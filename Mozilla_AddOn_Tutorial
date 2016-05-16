@@ -1,0 +1,61 @@
+Add-On getting started tutorial:
+
+1. To create Firefox add-ons using sdk:
+  a. Firefox version 38 or later
+  b. command-line jpm tool
+2. Once jpm is installed, run the following command to initialize new addon (first change the directory to the desired project folder using cd command)
+  jpm init
+3. When you run jpm init command it will ask you values for multiple properties which ultimately would be added to the package.json. Following are the properties that it will ask you values for:
+title: (My Jetpack Addon) jsinfer-addon
+  name: (jsinfer-addon)
+  version: (0.0.1)
+  description: (A basic add-on)
+  entry point: (index.js)
+  author: Yogesh Dixit
+  engines (comma separated): (firefox,fennec)
+  license: (MIT)
+  JPM [info] About to write to C:\your add-on directory\package.json:
+
+  Is this ok? (yes) yes
+4. Once done it will write all the info provided to the package.json.
+   Your package.json should look somewhat like this:
+   {
+   "title": "jsinfer-addon",
+   "name": "jsinfer-addon",
+   "version": "0.0.1",
+   "description": "add-on for JS type inference",
+   "main": "index.js",
+   "author": "Yogesh Dixit",
+   "engines": {
+     "firefox": ">=38.0a1",
+     "fennec": ">=38.0a1"
+   },
+   "license": "MIT",
+   "keywords": [
+     "jetpack"
+   ]
+   }
+5. Congratulations, we have created our first mozilla add-on. Now we can run our add-on using following command:
+  jpm run
+6. Reference (https://developer.mozilla.org/en-US/Add-ons/SDK/Tools/jpm#Installation)
+
+
+Instaling jpm:
+
+1. jpm is distributed using node package manager (npm)
+2. Install Node from (nodejs.org), which includes npm
+3. Once npm is installed, install jpm locally or globally using following commands,
+  a. npm install jpm --global (to install globally)
+  b. npm install jpm (to install locally)
+4. to test the successful installation of jpm, run jpm command on command line. You should be able to see all the available jpm commands.
+5. If you have installed jpm locally then you need to add "/node_modules/.bin/" directory to your PATH variable.
+6. On windows you can do this by going to My Computer > properties >  advanced system settings > Environment Variables > add the directory path to the end of the current path
+7. restart your system once step 6 is performed
+
+
+Using require libraries in mozilla add-on
+
+1. From my "Add-On getting started tutorial" once we create a add-on project using jpm init command
+2. An index.js file will be created in our project directory
+3. create a data folder in project directory using mkdir command
+4.
